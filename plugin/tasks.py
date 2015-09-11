@@ -24,11 +24,12 @@ from cloudify.decorators import workflow
 from cloudify.workflows.tasks_graph import forkjoin
 
 @workflow
-def run_test(operation, type_name, operation_kwargs, is_node_operation, **kwargs):
+def upgrade(type_name, operation_kwargs, **kwargs):
     graph = ctx.graph_mode()
 
     send_event_starting_tasks = {}
     send_event_done_tasks = {}
+    upgrade_operations = ["stop","delete","create","configure","start"]
 
     for node in ctx.nodes:
         if type_name in node.type_hierarchy:
@@ -42,14 +43,8 @@ def run_test(operation, type_name, operation_kwargs, is_node_operation, **kwargs
 
                 sequence = graph.sequence()
 
-                if is_node_operation:
+                for operation in upgrade_operations:
                     operation_task = instance.execute_operation(operation, kwargs=operation_kwargs)
-                else:
-                    forkjoin_tasks = []
-                    for relationship in instance.relationships:
-                        forkjoin_tasks.append(relationship.execute_source_operation(operation))
-                        forkjoin_tasks.append(relationship.execute_target_operation(operation))
-                    operation_task = forkjoin(*forkjoin_tasks)
 
                 sequence.add(
                     send_event_starting_tasks[instance.id],
