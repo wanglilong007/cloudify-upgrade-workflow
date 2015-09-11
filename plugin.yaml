@@ -1,0 +1,39 @@
+###
+#plugins:
+  # Name could be anything, this name is what appears on the beginning of operation
+  # mappings.
+  #plugin_name:
+    # Could be 'central_deployment_agent' or 'host_agent'.
+    # If 'central_deployment_agent', this plugin will be executed on the
+    # deployment dedicated agent, other wise it will be executed on the host agent.
+    #executor: host_agent
+
+    # URL to archive containing the plugin or name of directory containing
+    # the plugin if it is included in the the blueprint directory under the
+    # "plugins" directory.
+    # source: https://github.com/cloudify-cosmo/cloudify-plugin-template/archive/master.zip
+    
+    
+plugins:
+  upgrade:
+    executor: central_deployment_agent
+    source: upgrade-workflow
+    
+    
+workflows:
+  my_workflow:
+    mapping: upgrade.plugin.tasks.run_test
+    parameters:
+      operation:
+        description: the operation to execute
+      type_name:
+        description: the base type for filtering nodes
+        default: cloudify.nodes.Root
+      operation_kwargs:
+        description: the operation kwargs
+        default: {}
+      is_node_operation:
+        description: >
+          is the operation a node operation or
+          a relationship operation otherwise
+        default: true
