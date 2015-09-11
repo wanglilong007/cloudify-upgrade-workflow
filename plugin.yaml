@@ -17,7 +17,7 @@
 plugins:
   upgrade:
     executor: central_deployment_agent
-    source: upgrade-workflow
+    source: master
     
     
 workflows:
