@@ -23,19 +23,31 @@ from cloudify.workflows import ctx
 from cloudify.decorators import workflow
 from cloudify.workflows.tasks_graph import forkjoin
 
+upgrade_operations = {}
+
+def _execute_one_operation(instance, operation, is_node_operation, operation_kwargs):
+    if is_node_operation:
+        operation_task = instance.execute_operation(operation, kwargs=operation_kwargs)
+    else:
+        forkjoin_tasks = []
+        for relationship in instance.relationships:
+            forkjoin_tasks.append(relationship.execute_source_operation(operation))
+            forkjoin_tasks.append(relationship.execute_target_operation(operation))
+        operation_task = forkjoin(*forkjoin_tasks)
+    return operation_task
+
 @workflow
 def upgrade(type_name, operation_kwargs, **kwargs):
     graph = ctx.graph_mode()
 
     send_event_starting_tasks = {}
     send_event_done_tasks = {}
-    upgrade_operations = ["stop","delete","create","configure","start"]
 
     for node in ctx.nodes:
         if type_name in node.type_hierarchy:
             for instance in node.instances:
-                send_event_starting_tasks[instance.id] = instance.send_event('Starting to run operation')
-                send_event_done_tasks[instance.id] = instance.send_event('Done running operation')
+                send_event_starting_tasks[instance.id] = instance.send_event('Starting to run upgrade workflow')
+                send_event_done_tasks[instance.id] = instance.send_event('Done running upgrade workflow')
 
     for node in ctx.nodes:
         if type_name in node.type_hierarchy:
@@ -43,12 +55,17 @@ def upgrade(type_name, operation_kwargs, **kwargs):
 
                 sequence = graph.sequence()
 
-                for operation in upgrade_operations:
-                    operation_task = instance.execute_operation(operation, kwargs=operation_kwargs)
-
                 sequence.add(
                     send_event_starting_tasks[instance.id],
-                    operation_task,
+                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.stop", True, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.unlink", False, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.delete", True, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.create", True, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.preconfigure", False, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.configure", True, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.postconfigure", False, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.start", True, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.establish", False, operation_kwargs),
                     send_event_done_tasks[instance.id])
 
     for node in ctx.nodes:
