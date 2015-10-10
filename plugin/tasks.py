@@ -57,6 +57,8 @@ def update(type_name, operation_kwargs, **kwargs):
 
                 sequence.add(
                     send_event_starting_tasks[instance.id],
+                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.stop", True, operation_kwargs),
+                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.unlink", False, operation_kwargs),
                     _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.preconfigure", False, operation_kwargs),
                     _execute_one_operation(instance, "cloudify.interfaces.lifecycle.configure", True, operation_kwargs),
                     _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.postconfigure", False, operation_kwargs),
