@@ -57,24 +57,8 @@ def update(type_name, operation_kwargs, **kwargs):
 
                 sequence.add(
                     send_event_starting_tasks[instance.id],
-                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.stop", True, operation_kwargs),
-                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.unlink", False, operation_kwargs),
-                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.preconfigure", False, operation_kwargs),
                     _execute_one_operation(instance, "cloudify.interfaces.lifecycle.configure", True, operation_kwargs),
-                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.postconfigure", False, operation_kwargs),
-                    _execute_one_operation(instance, "cloudify.interfaces.lifecycle.start", True, operation_kwargs),
-                    _execute_one_operation(instance, "cloudify.interfaces.relationship_lifecycle.establish", False, operation_kwargs),
                     send_event_done_tasks[instance.id])
-
-    for node in ctx.nodes:
-        for instance in node.instances:
-            for rel in instance.relationships:
-
-                instance_starting_task = send_event_starting_tasks.get(instance.id)
-                target_done_task = send_event_done_tasks.get(rel.target_id)
-
-                if instance_starting_task and target_done_task:
-                    graph.add_dependency(instance_starting_task, target_done_task)
 
     return graph.execute()
 
